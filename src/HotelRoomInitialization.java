@@ -257,24 +257,68 @@ class AddOnServiceManager {
     }
 }
 
+class BookingHistory {
+
+    private List<Reservation> confirmedReservations;
+
+    public BookingHistory() {
+        confirmedReservations = new ArrayList<>();
+    }
+
+    public void addReservation(Reservation reservation) {
+        confirmedReservations.add(reservation);
+    }
+
+    public List<Reservation> getConfirmedReservations() {
+        return confirmedReservations;
+    }
+}
+class BookingReportService {
+
+    public void generateReport(BookingHistory history) {
+
+        System.out.println("\nBooking History Report");
+
+        for (Reservation r : history.getConfirmedReservations()) {
+            System.out.println("Guest: "
+                    + r.getGuestName()
+                    + ", Room Type: "
+                    + r.getRoomType());
+        }
+    }
+}
+
 public class HotelRoomInitialization {
 
     public static void main(String[] args) {
 
-        System.out.println("Add-On Service Selection");
+        System.out.println("Booking History and Reporting");
 
-        // Assume reservation already confirmed
-        String reservationId = "Single-1";
+        // Inventory
+        RoomInventory inventory = new RoomInventory();
 
-        AddOnServiceManager serviceManager = new AddOnServiceManager();
+        // Queue
+        BookingRequestQueue bookingQueue = new BookingRequestQueue();
+        bookingQueue.addRequest(new Reservation("Abhi", "Single"));
+        bookingQueue.addRequest(new Reservation("Subha", "Double"));
+        bookingQueue.addRequest(new Reservation("Vanmathi", "Suite"));
 
-        // Add services
-        serviceManager.addService(reservationId, new AddOnService("Breakfast", 500));
-        serviceManager.addService(reservationId, new AddOnService("Spa", 1000));
+        // Allocation + History
+        RoomAllocationService allocationService = new RoomAllocationService();
+        BookingHistory history = new BookingHistory();
 
-        double totalCost = serviceManager.calculateTotalServiceCost(reservationId);
+        // Process bookings
+        while (bookingQueue.hasPendingRequests()) {
+            Reservation r = bookingQueue.getNextRequest();
 
-        System.out.println("Reservation ID: " + reservationId);
-        System.out.println("Total Add-On Cost: " + totalCost);
+            allocationService.allocateRoom(r, inventory);
+
+            // Store in history AFTER confirmation
+            history.addReservation(r);
+        }
+
+        // Generate report
+        BookingReportService reportService = new BookingReportService();
+        reportService.generateReport(history);
     }
 }
