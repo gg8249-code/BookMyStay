@@ -2,7 +2,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Queue;
 import java.util.LinkedList;
-
+import java.io.*;
 import java.util.*;
 
 abstract class Room {
@@ -422,47 +422,84 @@ class ConcurrentBookingProcessor implements Runnable {
         }
     }
 }
+
+class FilePersistenceService {
+
+    // Save inventory to file
+    public void saveInventory(RoomInventory inventory, String filePath) {
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath))) {
+
+            Map<String, Integer> data = inventory.getRoomAvailability();
+
+            for (Map.Entry<String, Integer> entry : data.entrySet()) {
+                writer.write(entry.getKey() + "=" + entry.getValue());
+                writer.newLine();
+            }
+
+            System.out.println("Inventory saved successfully.");
+
+        } catch (IOException e) {
+            System.out.println("Error saving inventory: " + e.getMessage());
+        }
+    }
+
+    // Load inventory from file
+    public void loadInventory(RoomInventory inventory, String filePath) {
+
+        File file = new File(filePath);
+
+        if (!file.exists()) {
+            System.out.println("No valid inventory data found. Starting fresh.");
+            return;
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+
+            Map<String, Integer> data = inventory.getRoomAvailability();
+
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+
+                String[] parts = line.split("=");
+
+                if (parts.length == 2) {
+                    String roomType = parts[0];
+                    int count = Integer.parseInt(parts[1]);
+
+                    data.put(roomType, count);
+                }
+            }
+
+            System.out.println("Inventory loaded successfully.");
+
+        } catch (IOException | NumberFormatException e) {
+            System.out.println("Error loading inventory. Starting fresh.");
+        }
+    }
+}
 public class HotelRoomInitialization {
 
     public static void main(String[] args) {
 
-        System.out.println("Concurrent Booking Simulation");
+        System.out.println("System Recovery");
 
-        // Shared resources
         RoomInventory inventory = new RoomInventory();
-        BookingRequestQueue bookingQueue = new BookingRequestQueue();
-        RoomAllocationService allocationService = new RoomAllocationService();
+        FilePersistenceService persistence = new FilePersistenceService();
 
-        // Add multiple booking requests
-        bookingQueue.addRequest(new Reservation("Abhi", "Single"));
-        bookingQueue.addRequest(new Reservation("Vanmathi", "Double"));
-        bookingQueue.addRequest(new Reservation("Kural", "Suite"));
-        bookingQueue.addRequest(new Reservation("Subha", "Single"));
+        String filePath = "inventory.txt";
 
-        // Create threads
-        Thread t1 = new Thread(
-                new ConcurrentBookingProcessor(bookingQueue, inventory, allocationService)
-        );
+        // 🔄 Load previous state
+        persistence.loadInventory(inventory, filePath);
 
-        Thread t2 = new Thread(
-                new ConcurrentBookingProcessor(bookingQueue, inventory, allocationService)
-        );
-
-        // Start threads
-        t1.start();
-        t2.start();
-
-        try {
-            t1.join();
-            t2.join();
-        } catch (InterruptedException e) {
-            System.out.println("Thread execution interrupted.");
-        }
-
-        // Final inventory state
-        System.out.println("\nRemaining Inventory:");
+        // Show current inventory
+        System.out.println("\nCurrent Inventory:");
         System.out.println("Single: " + inventory.getRoomAvailability().get("Single Room"));
         System.out.println("Double: " + inventory.getRoomAvailability().get("Double Room"));
         System.out.println("Suite: " + inventory.getRoomAvailability().get("Suite Room"));
+
+        // 💾 Save state before exit
+        persistence.saveInventory(inventory, filePath);
     }
 }

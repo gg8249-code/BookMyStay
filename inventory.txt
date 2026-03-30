@@ -1,0 +1,3 @@
+Single Room=5
+Suite Room=2
+Double Room=3
