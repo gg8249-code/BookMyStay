@@ -3,6 +3,65 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.LinkedList;
 
+import java.util.*;
+
+class RoomAllocationService {
+
+    // Prevent duplicate room IDs
+    private Set<String> allocatedRoomIds;
+
+    // Track assigned rooms by type
+    private Map<String, Set<String>> assignedRoomsByType;
+
+    public RoomAllocationService() {
+        allocatedRoomIds = new HashSet<>();
+        assignedRoomsByType = new HashMap<>();
+    }
+
+    public void allocateRoom(Reservation reservation, RoomInventory inventory) {
+
+        String roomType = reservation.getRoomType();
+
+        // Get current availability
+        Map<String, Integer> availability = inventory.getRoomAvailability();
+
+        // Check availability
+        if (availability.getOrDefault(roomType, 0) <= 0) {
+            System.out.println("No rooms available for " + roomType);
+            return;
+        }
+
+        // Generate unique room ID
+        String roomId = generateRoomId(roomType);
+
+        // Store globally (prevent duplicates)
+        allocatedRoomIds.add(roomId);
+
+        // Store by type
+        assignedRoomsByType
+                .computeIfAbsent(roomType, k -> new HashSet<>())
+                .add(roomId);
+
+        // Update inventory (IMPORTANT)
+        inventory.updateAvailability(roomType, availability.get(roomType) - 1);
+
+        // Confirmation output
+        System.out.println("Booking confirmed for Guest: "
+                + reservation.getGuestName()
+                + ", Room ID: "
+                + roomId);
+    }
+
+    private String generateRoomId(String roomType) {
+
+        int count = assignedRoomsByType
+                .getOrDefault(roomType, new HashSet<>())
+                .size() + 1;
+
+        return roomType + "-" + count;
+    }
+}
+
 class BookingRequestQueue {
 
     private Queue<Reservation> requestQueue;
@@ -127,30 +186,25 @@ public class HotelRoomInitialization {
 
     public static void main(String[] args) {
 
-        System.out.println("Booking Request Queue");
+        System.out.println("Room Allocation Processing");
 
+        // Inventory
+        RoomInventory inventory = new RoomInventory();
+
+        // Booking Queue
         BookingRequestQueue bookingQueue = new BookingRequestQueue();
 
-        // Create booking requests
-        Reservation r1 = new Reservation("Abhi", "Single");
-        Reservation r2 = new Reservation("Subha", "Double");
-        Reservation r3 = new Reservation("Vanmathi", "Suite");
+        bookingQueue.addRequest(new Reservation("Abhi", "Single"));
+        bookingQueue.addRequest(new Reservation("Subha", "Single"));
+        bookingQueue.addRequest(new Reservation("Vanmathi", "Suite"));
 
-        // Add to queue (FIFO)
-        bookingQueue.addRequest(r1);
-        bookingQueue.addRequest(r2);
-        bookingQueue.addRequest(r3);
+        // Allocation Service
+        RoomAllocationService allocationService = new RoomAllocationService();
 
-        // Process requests in FIFO order
+        // Process FIFO
         while (bookingQueue.hasPendingRequests()) {
             Reservation r = bookingQueue.getNextRequest();
-
-            System.out.println(
-                    "Processing booking for Guest: " +
-                            r.getGuestName() +
-                            ", Room Type: " +
-                            r.getRoomType()
-            );
+            allocationService.allocateRoom(r, inventory);
         }
     }
 }
