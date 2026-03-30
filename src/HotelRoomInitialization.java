@@ -86,18 +86,48 @@ public class HotelRoomInitialization {
 
     public static void main(String[] args) {
 
-        System.out.println("Hotel Room Inventory Status\n");
-
         Room single = new SingleRoom();
         Room doubleRoom = new DoubleRoom();
         Room suite = new SuiteRoom();
 
         RoomInventory inventory = new RoomInventory();
 
-        Map<String, Integer> availability = inventory.getRoomAvailability();
+        RoomSearchService searchService = new RoomSearchService();
 
-        single.displayDetails(availability.get("Single Room"));
-        doubleRoom.displayDetails(availability.get("Double Room"));
-        suite.displayDetails(availability.get("Suite Room"));
+        searchService.searchAvailableRooms(
+                inventory,
+                single,
+                doubleRoom,
+                suite
+        );
+    }
+}
+class RoomSearchService {
+
+    public void searchAvailableRooms(
+            RoomInventory inventory,
+            Room singleRoom,
+            Room doubleRoom,
+            Room suiteRoom) {
+
+        System.out.println("Room Search\n");
+
+        // Read-only access to inventory
+        java.util.Map<String, Integer> availability = inventory.getRoomAvailability();
+
+        // Single Room
+        if (availability.get("Single Room") > 0) {
+            singleRoom.displayDetails(availability.get("Single Room"));
+        }
+
+        // Double Room
+        if (availability.get("Double Room") > 0) {
+            doubleRoom.displayDetails(availability.get("Double Room"));
+        }
+
+        // Suite Room
+        if (availability.get("Suite Room") > 0) {
+            suiteRoom.displayDetails(availability.get("Suite Room"));
+        }
     }
 }
